@@ -38,69 +38,88 @@ return res.status(200).json(user)
 }
 
 
-export const askToAssistant=async (req,res)=>{
-   try {
-      const {command}=req.body
-      const user=await User.findById(req.userId);
-      user.history.push(command)
-      user.save()
-      const userName=user.name
-      const assistantName=user.assistantName
-      const result=await geminiResponse(command,assistantName,userName)
+export const askToAssistant = async (req, res) => {
+  try {
+    const { command } = req.body;
+    const user = await User.findById(req.userId);
 
-      const jsonMatch=result.match(/{[\s\S]*}/)
-      if(!jsonMatch){
-         return res.ststus(400).json({response:"sorry, i can't understand"})
-      }
-      const gemResult=JSON.parse(jsonMatch[0])
-      console.log(gemResult)
-      const type=gemResult.type
+    if (!user) {
+      return res.status(404).json({ response: "User not found" });
+    }
 
-      switch(type){
-         case 'get-date' :
-            return res.json({
-               type,
-               userInput:gemResult.userInput,
-               response:`current date is ${moment().format("YYYY-MM-DD")}`
-            });
-            case 'get-time':
-                return res.json({
-               type,
-               userInput:gemResult.userInput,
-               response:`current time is ${moment().format("hh:mm A")}`
-            });
-             case 'get-day':
-                return res.json({
-               type,
-               userInput:gemResult.userInput,
-               response:`today is ${moment().format("dddd")}`
-            });
-            case 'get-month':
-                return res.json({
-               type,
-               userInput:gemResult.userInput,
-               response:`today is ${moment().format("MMMM")}`
-            });
-      case 'google-search':
-      case 'youtube-search':
-      case 'youtube-play':
-      case 'general':
-      case  "calculator-open":
-      case "instagram-open": 
-       case "facebook-open": 
-       case "weather-show" :
-         return res.json({
-            type,
-            userInput:gemResult.userInput,
-            response:gemResult.response,
-         });
+    // Save command to history
+    user.history.push(command);
+    await user.save();
 
-         default:
-            return res.status(400).json({ response: "I didn't understand that command." })
-      }
-     
+    const userName = user.name;
+    const assistantName = user.assistantName;
 
-   } catch (error) {
-  return res.status(500).json({ response: "ask assistant error" })
-   }
-}
+    // Call Gemini
+    const result = await geminiResponse(command, assistantName, userName);
+
+    // Some Gemini responses include markdown ```json blocks — clean them
+    let cleaned = result.response;
+    if (cleaned.includes("```json")) {
+      cleaned = cleaned.replace(/```json|```/g, "").trim();
+    }
+
+    // Try parsing cleaned text if it's JSON-like
+    let parsed = {};
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      parsed = result; // fallback to original
+    }
+
+    // Determine type
+    const type = parsed.type || result.type || "general";
+    const userInput = parsed.userInput || result.userInput || command;
+    const responseText = parsed.response || result.response || "Sorry, I didn’t understand that.";
+
+    // Handle different command types
+    switch (type) {
+      case "get-date":
+        return res.json({
+          type,
+          userInput,
+          response: `📅 The current date is ${moment().format("YYYY-MM-DD")}.`,
+        });
+
+      case "get-time":
+        return res.json({
+          type,
+          userInput,
+          response: `⏰ The current time is ${moment().format("hh:mm A")}.`,
+        });
+
+      case "get-day":
+        return res.json({
+          type,
+          userInput,
+          response: `🗓️ Today is ${moment().format("dddd")}.`,
+        });
+
+      case "get-month":
+        return res.json({
+          type,
+          userInput,
+          response: `🌙 The current month is ${moment().format("MMMM")}.`,
+        });
+
+      // These are generic conversational responses
+      case "general":
+      default:
+        return res.json({
+          type: "general",
+          userInput,
+          response: responseText,
+        });
+    }
+  } catch (error) {
+    console.error("❌ askToAssistant Error:", error);
+    return res.status(500).json({
+      type: "error",
+      response: "Something went wrong while processing your command.",
+    });
+  }
+};
