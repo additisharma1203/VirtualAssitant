@@ -44,32 +44,73 @@ function Home() {
     
   }
 
-  const speak=(text)=>{
-    const utterence=new SpeechSynthesisUtterance(text)
-    utterence.lang = 'hi-IN';
-    const voices =window.speechSynthesis.getVoices()
-    const hindiVoice = voices.find(v => v.lang === 'hi-IN');
-    if (hindiVoice) {
-      utterence.voice = hindiVoice;
-    }
+//   const speak=(text)=>{
+//     const utterence=new SpeechSynthesisUtterance(text)
+//     utterence.lang = 'hi-IN';
+//     const voices =window.speechSynthesis.getVoices()
+//     const hindiVoice = voices.find(v => v.lang === 'hi-IN');
+//     if (hindiVoice) {
+//       utterence.voice = hindiVoice;
+//     }
 
 
-    isSpeakingRef.current=true
-    utterence.onend=()=>{
-        setAiText("");
-  isSpeakingRef.current = false;
-  setTimeout(() => {
-    startRecognition(); // ⏳ Delay se race condition avoid hoti hai
-  }, 800);
-    }
-   synth.cancel(); // 🛑 pehle se koi speech ho to band karo
-synth.speak(utterence);
+//     isSpeakingRef.current=true
+//     utterence.onend=()=>{
+//         setAiText("");
+//   isSpeakingRef.current = false;
+//   setTimeout(() => {
+//     startRecognition(); // ⏳ Delay se race condition avoid hoti hai
+//   }, 800);
+//     }
+//    synth.cancel(); // 🛑 pehle se koi speech ho to band karo
+// synth.speak(utterence);
+//   }
+
+const speak = (text) => {
+  if (!text) return;
+
+  console.log("Speaking:", text);
+
+  const synth = window.speechSynthesis;
+
+  // 🛑 STOP recognition before speaking
+  if (recognitionRef.current && isRecognizingRef.current) {
+    recognitionRef.current.stop();
+    isRecognizingRef.current = false;
+    setListening(false);
   }
 
+  const utterence = new SpeechSynthesisUtterance(text);
+
+  const voices = synth.getVoices();
+  utterence.voice = voices.find(v => v.lang === "en-US") || voices[0];
+
+  isSpeakingRef.current = true;
+
+  utterence.onend = () => {
+    isSpeakingRef.current = false;
+
+    // restart mic AFTER speaking
+    setTimeout(() => {
+      startRecognition();
+    }, 800);
+  };
+
+  synth.cancel();
+  synth.speak(utterence);
+};
+
   const handleCommand=(data)=>{
-    const {type,userInput,response}=data
-      speak(response);
-    
+    // const {type,userInput,response}=data
+    //   speak(response);
+
+    console.log("DATA:", data);
+    const text = data.response || data.reply || "Sorry, I didn't understand";
+    speak(text);   
+    const { type, userInput } = data;
+
+
+
     if (type === 'google-search') {
       const query = encodeURIComponent(userInput);
       window.open(`https://www.google.com/search?q=${query}`, '_blank');

@@ -3,6 +3,7 @@ import User from "../models/user.model.js"
 import bcrypt from "bcryptjs"
 export const signUp=async (req,res)=>{
 try {
+    console.log("BODY:", req.body);
     const {name,email,password}=req.body
 
     const existEmail=await User.findOne({email})
@@ -27,7 +28,6 @@ try {
        sameSite:"None",
        secure:true
     })
-
     return res.status(201).json(user)
 
 } catch (error) {
@@ -37,6 +37,7 @@ try {
 
 export const Login=async (req,res)=>{
 try {
+    console.log("BODY:", req.body);
     const {email,password}=req.body
 
     const user=await User.findOne({email})
@@ -57,7 +58,7 @@ try {
        sameSite:"None",
        secure:true
     })
-
+    
     return res.status(200).json(user)
 
 } catch (error) {
