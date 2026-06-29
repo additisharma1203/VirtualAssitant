@@ -107,11 +107,7 @@ This project is intentionally kept simple and currently **does not include**:
 * Intent Recognition
 * NLP models
 * Context memory
-* Authentication
-* Application control
 * Opening software or websites
-* File management
-* Voice activation ("Hey Assistant")
 * Multi-language support
 * Conversation history storage
 * Database integration
@@ -122,7 +118,6 @@ This project is intentionally kept simple and currently **does not include**:
 
 Some planned features include:
 
-* User authentication
 * Conversation history
 * NLP-based intent classification
 * Function calling
